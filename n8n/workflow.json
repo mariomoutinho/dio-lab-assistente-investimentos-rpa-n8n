@@ -1,0 +1,84 @@
+{
+  "name": "Assistente de Investimentos - RPA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clientes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Receber clientes",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -520,
+        0
+      ],
+      "webhookId": "clientes"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const entrada = items[0].json;\nconst clientes = entrada.body?.clientes ?? entrada.clientes ?? [];\n\nif (!Array.isArray(clientes) || clientes.length === 0) {\n  throw new Error('O payload precisa conter uma lista em \"clientes\".');\n}\n\nconst recomendacoes = {\n  Conservador: {\n    tipo: 'Renda fixa',\n    mensagem: 'Olá, {{nome}}! Para o seu perfil conservador, opções de renda fixa podem oferecer mais previsibilidade e segurança. Avalie alternativas compatíveis com seus objetivos e prazo.'\n  },\n  Moderado: {\n    tipo: 'Carteira diversificada',\n    mensagem: 'Olá, {{nome}}! Para o seu perfil moderado, uma carteira diversificada entre renda fixa e renda variável pode equilibrar segurança e potencial de crescimento. Avalie alternativas compatíveis com seus objetivos e prazo.'\n  },\n  Arrojado: {\n    tipo: 'Renda variável',\n    mensagem: 'Olá, {{nome}}! Para o seu perfil arrojado, uma parcela maior em renda variável pode buscar maior potencial de retorno, sempre considerando os riscos. Avalie alternativas compatíveis com seus objetivos e prazo.'\n  }\n};\n\nreturn clientes.map((cliente) => {\n  const perfil = cliente.perfil ?? 'Não informado';\n  const modelo = recomendacoes[perfil] ?? {\n    tipo: 'Análise necessária',\n    mensagem: 'Olá, {{nome}}! Não foi possível identificar seu perfil de investidor. Faça uma nova análise antes de escolher um investimento.'\n  };\n\n  return {\n    json: {\n      nome: cliente.nome ?? '',\n      email: cliente.email ?? '',\n      saldo: cliente.saldo ?? '',\n      perfil,\n      recomendacao: modelo.tipo,\n      mensagem: modelo.mensagem.replace('{{nome}}', cliente.nome ?? 'cliente')\n    }\n  };\n});"
+      },
+      "id": "2",
+      "name": "Gerar recomendações",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'ok', total: $input.all().length, clientes: $input.all().map(item => item.json) } }}",
+        "options": {}
+      },
+      "id": "3",
+      "name": "Responder ao RPA",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Receber clientes": {
+      "main": [
+        [
+          {
+            "node": "Gerar recomendações",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar recomendações": {
+      "main": [
+        [
+          {
+            "node": "Responder ao RPA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7f9c8d5d-3b4a-4f16-9f9b-6f8a56b9a001",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
