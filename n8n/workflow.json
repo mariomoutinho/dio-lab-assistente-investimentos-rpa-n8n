@@ -74,11 +74,12 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "America/Recife"
   },
   "versionId": "7f9c8d5d-3b4a-4f16-9f9b-6f8a56b9a001",
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "tags": []
+  "pinData": {}
 }
