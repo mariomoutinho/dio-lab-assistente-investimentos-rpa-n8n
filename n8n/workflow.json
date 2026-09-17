@@ -99,6 +99,11 @@
             "node": "Merge - Combinar dados",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "HTTP Request - Buscar investimentos",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
