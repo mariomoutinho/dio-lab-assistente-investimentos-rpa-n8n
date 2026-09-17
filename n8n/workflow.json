@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "1",
+      "id": "20115739-c383-4cbb-ad05-3b1b512adc5f",
       "name": "Webhook - Receber clientes",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -760,
-        0
+        -448,
+        -144
       ],
       "webhookId": "clientes"
     },
@@ -23,27 +23,26 @@
         "url": "https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/data.csv",
         "options": {}
       },
-      "id": "2",
+      "id": "83240da1-6a52-450d-bf22-d2785c37f9e3",
       "name": "HTTP Request - Buscar investimentos",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -760,
-        260
+        -192,
+        80
       ]
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
         "jsCode": "const csv = items[0].json.data ?? items[0].json.body ?? items[0].json;\nconst texto = typeof csv === 'string' ? csv : JSON.stringify(csv);\nconst linhas = texto.split(/\\r?\\n/).map(linha => linha.trim()).filter(Boolean);\n\nif (linhas.length < 2) {\n  return [{ json: { investimentos: [] } }];\n}\n\nconst cabecalho = linhas[0].split(',').map(campo => campo.trim());\nconst investimentos = linhas.slice(1).map(linha => {\n  const valores = linha.split(',').map(valor => valor.trim());\n  return Object.fromEntries(cabecalho.map((campo, indice) => [campo, valores[indice] ?? '']));\n});\n\nreturn [{ json: { investimentos } }];"
       },
-      "id": "3",
+      "id": "77eb32fc-ad1e-4e4a-a06d-88b440b09f0b",
       "name": "Code - Interpretar investimentos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -480,
-        260
+        96,
+        80
       ]
     },
     {
@@ -52,27 +51,26 @@
         "combineBy": "combineAll",
         "options": {}
       },
-      "id": "4",
+      "id": "e86f9ac7-8222-4e1c-9bb5-df2054bab808",
       "name": "Merge - Combinar dados",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -200,
-        60
+        368,
+        -128
       ]
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
         "jsCode": "const entrada = items.map(item => item.json);\nconst clientes = entrada.flatMap(dado => dado.body?.clientes ?? dado.clientes ?? []);\nconst investimentos = entrada.flatMap(dado => dado.investimentos ?? []);\n\nif (!clientes.length) {\n  throw new Error('Nenhum cliente foi recebido no campo \"clientes\".');\n}\n\nconst mensagens = {\n  Conservador: [\n    'Olá, {{nome}}! Para o seu perfil conservador, avalie alternativas de renda fixa compatíveis com seus objetivos e prazo.',\n    'Olá, {{nome}}! Seu perfil valoriza segurança e estabilidade. Uma carteira de renda fixa pode ajudar na organização dos seus investimentos.',\n    'Olá, {{nome}}! Para buscar mais previsibilidade, considere opções de renda fixa adequadas à sua tolerância a riscos.'\n  ],\n  Moderado: [\n    'Olá, {{nome}}! Para o seu perfil moderado, uma combinação entre renda fixa e renda variável pode equilibrar segurança e crescimento.',\n    'Olá, {{nome}}! Seu perfil permite diversificar entre investimentos mais estáveis e alternativas com maior potencial de retorno.',\n    'Olá, {{nome}}! Uma carteira diversificada pode ajudar a distribuir os riscos e buscar oportunidades no longo prazo.'\n  ],\n  Arrojado: [\n    'Olá, {{nome}}! Para o seu perfil arrojado, a renda variável pode oferecer maior potencial de retorno, acompanhada de maiores riscos.',\n    'Olá, {{nome}}! Seu perfil aceita mais oscilações em busca de crescimento. Avalie alternativas de renda variável adequadas aos seus objetivos.',\n    'Olá, {{nome}}! Uma exposição maior à renda variável pode fazer sentido, desde que você esteja preparado para oscilações e possíveis perdas.'\n  ]\n};\n\nreturn clientes.map(cliente => {\n  const perfil = cliente.perfil ?? 'Não informado';\n  const opcoes = mensagens[perfil];\n  const indice = opcoes ? Math.floor(Math.random() * opcoes.length) : 0;\n\n  return {\n    json: {\n      nome: cliente.nome ?? '',\n      email: cliente.email ?? '',\n      saldo: cliente.saldo ?? '',\n      perfil,\n      investimentos_disponiveis: investimentos.filter(investimento =>\n        Object.values(investimento).some(valor =>\n          String(valor).toLowerCase().includes(perfil.toLowerCase())\n        )\n      ),\n      mensagem: opcoes\n        ? opcoes[indice].replace('{{nome}}', cliente.nome ?? 'cliente')\n        : 'Perfil não identificado. É necessária uma nova análise antes da escolha de investimentos.'\n    }\n  };\n});"
       },
-      "id": "5",
+      "id": "24eee3d4-761e-40b3-8275-ecb2284733ef",
       "name": "Code - Gerar mensagens",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        80,
-        60
+        656,
+        -128
       ]
     },
     {
@@ -81,16 +79,91 @@
         "responseBody": "={{ { status: 'ok', total: $input.all().length, clientes: $input.all().map(item => item.json) } }}",
         "options": {}
       },
-      "id": "6",
+      "id": "4dba2c6a-834b-43ca-b985-653f5c4d4f66",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        360,
-        60
+        1744,
+        -128
       ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Crie um e-mail personalizado para o cliente abaixo.\n\nNome: {{ $json.nome }}\nE-mail: {{ $json.email }}\nSaldo disponível: {{ $json.saldo }}\nPerfil de investidor: {{ $json.perfil }}\n\nInvestimentos compatíveis encontrados:\n{{ JSON.stringify($json.investimentos_disponiveis) }}\n\nO e-mail deve:\n\n1. Cumprimentar o cliente pelo nome.\n2. Considerar o perfil de investidor informado.\n3. Apresentar as opções de investimento encontradas.\n4. Explicar de forma simples a finalidade de cada opção.\n5. Evitar prometer resultados.\n6. Orientar o cliente a considerar seus objetivos, prazo e tolerância a riscos.\n7. Encerrar de forma cordial.\n8. Incluir uma observação de que o conteúdo é educativo e não constitui recomendação financeira individual.\n\nRetorne exclusivamente o JSON no seguinte formato:\n\n{\n  \"assunto\": \"Assunto do e-mail\",\n  \"corpo\": \"Texto completo do e-mail\"\n}\n\n {{ $json.investimentos_disponiveis[1].perfil }}"
+            },
+            {
+              "role": "system",
+              "content": "Você é um assistente de comunicação financeira responsável.\n\nSua tarefa é criar um e-mail personalizado para um cliente com base no nome, saldo, perfil de investidor e investimentos compatíveis.\n\nRegras:\n\n- Escreva em português do Brasil.\n- Use tom profissional, claro, cordial e humanizado.\n- Não prometa rentabilidade ou ganhos.\n- Não use linguagem alarmista.\n- Não invente produtos, valores ou informações.\n- Considere o perfil do cliente.\n- Explique brevemente por que as opções apresentadas podem ser compatíveis com o perfil.\n- Recomende que o cliente avalie seus objetivos, prazo e tolerância a riscos.\n- Informe que a mensagem é educativa e não substitui uma análise financeira profissional.\n- Gere somente um objeto JSON válido, sem Markdown e sem texto fora do JSON.\n\nFormato obrigatório:\n\n{\n  \"assunto\": \"Assunto do e-mail\",\n  \"corpo\": \"Texto completo do e-mail\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        -128
+      ],
+      "id": "adecd636-3703-4ca6-b210-02eb234abba4",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const entradasGPT = $input.all();\nconst clientesOriginais = $(\"Code - Gerar mensagens\").all();\n\nfunction obterTextoDoGPT(json) {\n  const possiveisTextos = [\n    // Formato mostrado na sua imagem\n    json.output?.[0]?.content?.[0]?.text,\n\n    // Outro formato possível do n8n\n    json.output?.output?.[0]?.content?.[0]?.text,\n\n    json.output_text,\n    json.text,\n    json.response\n  ];\n\n  const textoEncontrado = possiveisTextos.find(\n    texto => typeof texto === \"string\" && texto.trim() !== \"\"\n  );\n\n  return textoEncontrado || \"\";\n}\n\nfunction limparResposta(texto) {\n  let resposta = String(texto || \"\").trim();\n\n  resposta = resposta\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/\\s*```$/i, \"\")\n    .trim();\n\n  return resposta;\n}\n\nfunction interpretarJSON(texto) {\n  if (!texto) {\n    return {};\n  }\n\n  const textoLimpo = limparResposta(texto);\n\n  // Primeira tentativa: JSON normal\n  try {\n    return JSON.parse(textoLimpo);\n  } catch (erro) {\n    // Continua para a próxima tentativa\n  }\n\n  // Segunda tentativa: JSON com aspas e quebras escapadas\n  try {\n    const textoCorrigido = textoLimpo\n      .replace(/\\\\\"/g, '\"')\n      .replace(/\\\\n/g, \"\\n\");\n\n    return JSON.parse(textoCorrigido);\n  } catch (erro) {\n    // Continua para a próxima tentativa\n  }\n\n  // Terceira tentativa: extrair somente o trecho entre { e }\n  const inicioJSON = textoLimpo.indexOf(\"{\");\n  const fimJSON = textoLimpo.lastIndexOf(\"}\");\n\n  if (inicioJSON !== -1 && fimJSON !== -1) {\n    const trechoJSON = textoLimpo.substring(\n      inicioJSON,\n      fimJSON + 1\n    );\n\n    try {\n      return JSON.parse(trechoJSON);\n    } catch (erro) {\n      return {};\n    }\n  }\n\n  return {};\n}\n\nfunction escaparHTML(texto) {\n  return String(texto || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\nfunction transformarEmHTML(texto) {\n  const textoEscapado = escaparHTML(texto);\n\n  const paragrafos = textoEscapado\n    .split(/\\n\\s*\\n/)\n    .filter(paragrafo => paragrafo.trim() !== \"\")\n    .map(paragrafo => {\n      return `<p>${paragrafo.replace(/\\n/g, \"<br>\")}</p>`;\n    })\n    .join(\"\\n\");\n\n  return `\n<html>\n  <body>\n    ${paragrafos}\n\n    <br>\n\n    <p>\n      <strong>Atenção:</strong> esta mensagem possui caráter educativo\n      e não constitui recomendação financeira individual.\n    </p>\n  </body>\n</html>\n`.trim();\n}\n\nreturn entradasGPT.map((entrada, indice) => {\n  const cliente = clientesOriginais[indice]?.json || {};\n\n  const textoGPT = obterTextoDoGPT(entrada.json);\n  const respostaGPT = interpretarJSON(textoGPT);\n\n  const nome = cliente.nome || \"cliente\";\n  const email = cliente.email || \"\";\n\n  const assunto =\n    respostaGPT.assunto ||\n    respostaGPT.subject ||\n    \"Sugestão de investimento personalizada\";\n\n  const corpo =\n    respostaGPT.corpo ||\n    respostaGPT.body ||\n    respostaGPT.text_body ||\n    respostaGPT.mensagem ||\n    textoGPT ||\n    `Olá, ${nome}! Não foi possível gerar a mensagem personalizada.`;\n\n  const corpoFinal = String(corpo)\n    .replace(/\\\\n/g, \"\\n\")\n    .trim();\n\n  return {\n    json: {\n      ok: Boolean(email && corpoFinal),\n\n      to: email,\n\n      subject: assunto,\n\n      text_body: corpoFinal,\n\n      html_body: transformarEmHTML(corpoFinal),\n\n      meta: {\n        nome: nome,\n        email: email,\n        perfil: cliente.perfil || \"\",\n        saldo: cliente.saldo || \"\",\n        quantidade_investimentos:\n          cliente.investimentos_disponiveis?.length || 0\n      }\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -128
+      ],
+      "id": "14ab3526-489d-41cd-9ee2-45c4413582ac",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -128
+      ],
+      "id": "6998c61e-c3c3-4dfd-9108-f9defb06beaa",
+      "name": "Send a message",
+      "webhookId": "7c0913fa-c016-4bb4-8302-f140e3acd930",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RZS8VYtxH9xyl2xY",
+          "name": "Gmail account"
+        }
+      }
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook - Receber clientes": {
       "main": [
@@ -145,6 +218,39 @@
       "main": [
         [
           {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
             "node": "Respond to Webhook",
             "type": "main",
             "index": 0
@@ -156,10 +262,14 @@
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "timezone": "America/Recife"
+    "binaryMode": "separate"
   },
-  "versionId": "7f9c8d5d-3b4a-4f16-9f9b-6f8a56b9a001",
-  "pinData": {}
+  "versionId": "21e42a1a-276e-4e37-9544-822c3600a15c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2f81148f46c1e218503dd3b348469b553f5684f752655f7c19d94a03b753253f"
+  },
+  "nodeGroups": [],
+  "id": "XqgEQFf72dhPQfqm",
+  "tags": []
 }
