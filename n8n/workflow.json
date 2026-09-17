@@ -1,5 +1,5 @@
 {
-  "name": "Assistente de Investimentos - RPA",
+  "name": "Assistente de Investimentos - RPA completo",
   "nodes": [
     {
       "parameters": {
@@ -9,27 +9,70 @@
         "options": {}
       },
       "id": "1",
-      "name": "Receber clientes",
+      "name": "Webhook - Receber clientes",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "typeVersion": 2.1,
       "position": [
-        -520,
+        -760,
         0
       ],
       "webhookId": "clientes"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const entrada = items[0].json;\nconst clientes = entrada.body?.clientes ?? entrada.clientes ?? [];\n\nif (!Array.isArray(clientes) || clientes.length === 0) {\n  throw new Error('O payload precisa conter uma lista em \"clientes\".');\n}\n\nconst recomendacoes = {\n  Conservador: {\n    tipo: 'Renda fixa',\n    mensagem: 'Olá, {{nome}}! Para o seu perfil conservador, opções de renda fixa podem oferecer mais previsibilidade e segurança. Avalie alternativas compatíveis com seus objetivos e prazo.'\n  },\n  Moderado: {\n    tipo: 'Carteira diversificada',\n    mensagem: 'Olá, {{nome}}! Para o seu perfil moderado, uma carteira diversificada entre renda fixa e renda variável pode equilibrar segurança e potencial de crescimento. Avalie alternativas compatíveis com seus objetivos e prazo.'\n  },\n  Arrojado: {\n    tipo: 'Renda variável',\n    mensagem: 'Olá, {{nome}}! Para o seu perfil arrojado, uma parcela maior em renda variável pode buscar maior potencial de retorno, sempre considerando os riscos. Avalie alternativas compatíveis com seus objetivos e prazo.'\n  }\n};\n\nreturn clientes.map((cliente) => {\n  const perfil = cliente.perfil ?? 'Não informado';\n  const modelo = recomendacoes[perfil] ?? {\n    tipo: 'Análise necessária',\n    mensagem: 'Olá, {{nome}}! Não foi possível identificar seu perfil de investidor. Faça uma nova análise antes de escolher um investimento.'\n  };\n\n  return {\n    json: {\n      nome: cliente.nome ?? '',\n      email: cliente.email ?? '',\n      saldo: cliente.saldo ?? '',\n      perfil,\n      recomendacao: modelo.tipo,\n      mensagem: modelo.mensagem.replace('{{nome}}', cliente.nome ?? 'cliente')\n    }\n  };\n});"
+        "url": "https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/data.csv",
+        "options": {}
       },
       "id": "2",
-      "name": "Gerar recomendações",
+      "name": "HTTP Request - Buscar investimentos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -760,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const csv = items[0].json.data ?? items[0].json.body ?? items[0].json;\nconst texto = typeof csv === 'string' ? csv : JSON.stringify(csv);\nconst linhas = texto.split(/\\r?\\n/).map(linha => linha.trim()).filter(Boolean);\n\nif (linhas.length < 2) {\n  return [{ json: { investimentos: [] } }];\n}\n\nconst cabecalho = linhas[0].split(',').map(campo => campo.trim());\nconst investimentos = linhas.slice(1).map(linha => {\n  const valores = linha.split(',').map(valor => valor.trim());\n  return Object.fromEntries(cabecalho.map((campo, indice) => [campo, valores[indice] ?? '']));\n});\n\nreturn [{ json: { investimentos } }];"
+      },
+      "id": "3",
+      "name": "Code - Interpretar investimentos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
-        0
+        -480,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Merge - Combinar dados",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -200,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const entrada = items.map(item => item.json);\nconst clientes = entrada.flatMap(dado => dado.body?.clientes ?? dado.clientes ?? []);\nconst investimentos = entrada.flatMap(dado => dado.investimentos ?? []);\n\nif (!clientes.length) {\n  throw new Error('Nenhum cliente foi recebido no campo \"clientes\".');\n}\n\nconst mensagens = {\n  Conservador: [\n    'Olá, {{nome}}! Para o seu perfil conservador, avalie alternativas de renda fixa compatíveis com seus objetivos e prazo.',\n    'Olá, {{nome}}! Seu perfil valoriza segurança e estabilidade. Uma carteira de renda fixa pode ajudar na organização dos seus investimentos.',\n    'Olá, {{nome}}! Para buscar mais previsibilidade, considere opções de renda fixa adequadas à sua tolerância a riscos.'\n  ],\n  Moderado: [\n    'Olá, {{nome}}! Para o seu perfil moderado, uma combinação entre renda fixa e renda variável pode equilibrar segurança e crescimento.',\n    'Olá, {{nome}}! Seu perfil permite diversificar entre investimentos mais estáveis e alternativas com maior potencial de retorno.',\n    'Olá, {{nome}}! Uma carteira diversificada pode ajudar a distribuir os riscos e buscar oportunidades no longo prazo.'\n  ],\n  Arrojado: [\n    'Olá, {{nome}}! Para o seu perfil arrojado, a renda variável pode oferecer maior potencial de retorno, acompanhada de maiores riscos.',\n    'Olá, {{nome}}! Seu perfil aceita mais oscilações em busca de crescimento. Avalie alternativas de renda variável adequadas aos seus objetivos.',\n    'Olá, {{nome}}! Uma exposição maior à renda variável pode fazer sentido, desde que você esteja preparado para oscilações e possíveis perdas.'\n  ]\n};\n\nreturn clientes.map(cliente => {\n  const perfil = cliente.perfil ?? 'Não informado';\n  const opcoes = mensagens[perfil];\n  const indice = opcoes ? Math.floor(Math.random() * opcoes.length) : 0;\n\n  return {\n    json: {\n      nome: cliente.nome ?? '',\n      email: cliente.email ?? '',\n      saldo: cliente.saldo ?? '',\n      perfil,\n      investimentos_disponiveis: investimentos.filter(investimento =>\n        Object.values(investimento).some(valor =>\n          String(valor).toLowerCase().includes(perfil.toLowerCase())\n        )\n      ),\n      mensagem: opcoes\n        ? opcoes[indice].replace('{{nome}}', cliente.nome ?? 'cliente')\n        : 'Perfil não identificado. É necessária uma nova análise antes da escolha de investimentos.'\n    }\n  };\n});"
+      },
+      "id": "5",
+      "name": "Code - Gerar mensagens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        60
       ]
     },
     {
@@ -38,33 +81,66 @@
         "responseBody": "={{ { status: 'ok', total: $input.all().length, clientes: $input.all().map(item => item.json) } }}",
         "options": {}
       },
-      "id": "3",
-      "name": "Responder ao RPA",
+      "id": "6",
+      "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        40,
-        0
+        360,
+        60
       ]
     }
   ],
   "connections": {
-    "Receber clientes": {
+    "Webhook - Receber clientes": {
       "main": [
         [
           {
-            "node": "Gerar recomendações",
+            "node": "Merge - Combinar dados",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gerar recomendações": {
+    "HTTP Request - Buscar investimentos": {
       "main": [
         [
           {
-            "node": "Responder ao RPA",
+            "node": "Code - Interpretar investimentos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Interpretar investimentos": {
+      "main": [
+        [
+          {
+            "node": "Merge - Combinar dados",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge - Combinar dados": {
+      "main": [
+        [
+          {
+            "node": "Code - Gerar mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Gerar mensagens": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -77,7 +153,6 @@
     "executionOrder": "v1",
     "saveManualExecutions": true,
     "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": "",
     "timezone": "America/Recife"
   },
   "versionId": "7f9c8d5d-3b4a-4f16-9f9b-6f8a56b9a001",
