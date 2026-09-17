@@ -128,7 +128,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const entradasGPT = $input.all();\nconst clientesOriginais = $(\"Code - Gerar mensagens\").all();\n\nfunction obterTextoDoGPT(json) {\n  const possiveisTextos = [\n    // Formato mostrado na sua imagem\n    json.output?.[0]?.content?.[0]?.text,\n\n    // Outro formato possível do n8n\n    json.output?.output?.[0]?.content?.[0]?.text,\n\n    json.output_text,\n    json.text,\n    json.response\n  ];\n\n  const textoEncontrado = possiveisTextos.find(\n    texto => typeof texto === \"string\" && texto.trim() !== \"\"\n  );\n\n  return textoEncontrado || \"\";\n}\n\nfunction limparResposta(texto) {\n  let resposta = String(texto || \"\").trim();\n\n  resposta = resposta\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/\\s*```$/i, \"\")\n    .trim();\n\n  return resposta;\n}\n\nfunction interpretarJSON(texto) {\n  if (!texto) {\n    return {};\n  }\n\n  const textoLimpo = limparResposta(texto);\n\n  // Primeira tentativa: JSON normal\n  try {\n    return JSON.parse(textoLimpo);\n  } catch (erro) {\n    // Continua para a próxima tentativa\n  }\n\n  // Segunda tentativa: JSON com aspas e quebras escapadas\n  try {\n    const textoCorrigido = textoLimpo\n      .replace(/\\\\\"/g, '\"')\n      .replace(/\\\\n/g, \"\\n\");\n\n    return JSON.parse(textoCorrigido);\n  } catch (erro) {\n    // Continua para a próxima tentativa\n  }\n\n  // Terceira tentativa: extrair somente o trecho entre { e }\n  const inicioJSON = textoLimpo.indexOf(\"{\");\n  const fimJSON = textoLimpo.lastIndexOf(\"}\");\n\n  if (inicioJSON !== -1 && fimJSON !== -1) {\n    const trechoJSON = textoLimpo.substring(\n      inicioJSON,\n      fimJSON + 1\n    );\n\n    try {\n      return JSON.parse(trechoJSON);\n    } catch (erro) {\n      return {};\n    }\n  }\n\n  return {};\n}\n\nfunction escaparHTML(texto) {\n  return String(texto || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\nfunction transformarEmHTML(texto) {\n  const textoEscapado = escaparHTML(texto);\n\n  const paragrafos = textoEscapado\n    .split(/\\n\\s*\\n/)\n    .filter(paragrafo => paragrafo.trim() !== \"\")\n    .map(paragrafo => {\n      return `<p>${paragrafo.replace(/\\n/g, \"<br>\")}</p>`;\n    })\n    .join(\"\\n\");\n\n  return `\n<html>\n  <body>\n    ${paragrafos}\n\n    <br>\n\n    <p>\n      <strong>Atenção:</strong> esta mensagem possui caráter educativo\n      e não constitui recomendação financeira individual.\n    </p>\n  </body>\n</html>\n`.trim();\n}\n\nreturn entradasGPT.map((entrada, indice) => {\n  const cliente = clientesOriginais[indice]?.json || {};\n\n  const textoGPT = obterTextoDoGPT(entrada.json);\n  const respostaGPT = interpretarJSON(textoGPT);\n\n  const nome = cliente.nome || \"cliente\";\n  const email = cliente.email || \"\";\n\n  const assunto =\n    respostaGPT.assunto ||\n    respostaGPT.subject ||\n    \"Sugestão de investimento personalizada\";\n\n  const corpo =\n    respostaGPT.corpo ||\n    respostaGPT.body ||\n    respostaGPT.text_body ||\n    respostaGPT.mensagem ||\n    textoGPT ||\n    `Olá, ${nome}! Não foi possível gerar a mensagem personalizada.`;\n\n  const corpoFinal = String(corpo)\n    .replace(/\\\\n/g, \"\\n\")\n    .trim();\n\n  return {\n    json: {\n      ok: Boolean(email && corpoFinal),\n\n      to: email,\n\n      subject: assunto,\n\n      text_body: corpoFinal,\n\n      html_body: transformarEmHTML(corpoFinal),\n\n      meta: {\n        nome: nome,\n        email: email,\n        perfil: cliente.perfil || \"\",\n        saldo: cliente.saldo || \"\",\n        quantidade_investimentos:\n          cliente.investimentos_disponiveis?.length || 0\n      }\n    }\n  };\n});"
+        "jsCode": "const entradasGPT = $input.all();\nconst clientesOriginais = $(\"Code - Gerar mensagens\").all();\n\nfunction obterTextoDoGPT(json) {\n  const possiveisTextos = [\n    // Formato mostrado na sua imagem\n    json.output?.[0]?.content?.[0]?.text,\n\n    // Outro formato possível do n8n\n    json.output?.output?.[0]?.content?.[0]?.text,\n\n    json.output_text,\n    json.text,\n    json.response\n  ];\n\n  const textoEncontrado = possiveisTextos.find(\n    texto => typeof texto === \"string\" && texto.trim() !== \"\"\n  );\n\n  return textoEncontrado || \"\";\n}\n\nfunction limparResposta(texto) {\n  let resposta = String(texto || \"\").trim();\n\n  resposta = resposta\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/\\s*```$/i, \"\")\n    .trim();\n\n  return resposta;\n}\n\nfunction interpretarJSON(texto) {\n  if (!texto) {\n    return {};\n  }\n\n  const textoLimpo = limparResposta(texto);\n\n  // Primeira tentativa: JSON normal\n  try {\n    return JSON.parse(textoLimpo);\n  } catch (erro) {\n    // Continua para a próxima tentativa\n  }\n\n  // Segunda tentativa: JSON com aspas e quebras escapadas\n  try {\n    const textoCorrigido = textoLimpo\n      .replace(/\\\\\"/g, '\"')\n      .replace(/\\\\n/g, \"\\n\");\n\n    return JSON.parse(textoCorrigido);\n  } catch (erro) {\n    // Continua para a próxima tentativa\n  }\n\n  // Terceira tentativa: extrair somente o trecho entre { e }\n  const inicioJSON = textoLimpo.indexOf(\"{\");\n  const fimJSON = textoLimpo.lastIndexOf(\"}\");\n\n  if (inicioJSON !== -1 && fimJSON !== -1) {\n    const trechoJSON = textoLimpo.substring(\n      inicioJSON,\n      fimJSON + 1\n    );\n\n    try {\n      return JSON.parse(trechoJSON);\n    } catch (erro) {\n      return {};\n    }\n  }\n\n  return {};\n}\n\nfunction escaparHTML(texto) {\n  return String(texto || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\nfunction transformarEmHTML(texto) {\n  const textoEscapado = escaparHTML(texto);\n\n  const paragrafos = textoEscapado\n    .split(/\\n\\s*\\n/)\n    .filter(paragrafo => paragrafo.trim() !== \"\")\n    .map(paragrafo => {\n      return `<p>${paragrafo.replace(/\\n/g, \"<br>\")}</p>`;\n    })\n    .join(\"\\n\");\n\n  return `\n<html>\n  <body>\n    ${paragrafos}\n\n    <br>\n\n    <p>\n      <strong>Atenção:</strong> esta mensagem possui caráter educativo\n      e não constitui recomendação financeira individual.\n    </p>\n  </body>\n</html>\n`.trim();\n}\n\nreturn entradasGPT.map((entrada, indice) => {\n  const cliente = clientesOriginais[indice]?.json || {};\n\n  const textoGPT = obterTextoDoGPT(entrada.json);\n  const respostaGPT = interpretarJSON(textoGPT);\n\n  const nome = cliente.nome || \"cliente\";\n  const email = cliente.email || \"\";\\n  const emailValido = /^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]{2,}$/i.test(email);\n\n  const assunto =\n    respostaGPT.assunto ||\n    respostaGPT.subject ||\n    \"Sugestão de investimento personalizada\";\n\n  const corpo =\n    respostaGPT.corpo ||\n    respostaGPT.body ||\n    respostaGPT.text_body ||\n    respostaGPT.mensagem ||\n    textoGPT ||\n    `Olá, ${nome}! Não foi possível gerar a mensagem personalizada.`;\n\n  const corpoFinal = String(corpo)\n    .replace(/\\\\n/g, \"\\n\")\n    .trim();\n\n  return {\n    json: {\n      ok: Boolean(email && corpoFinal),\n\n      to: email,\n\n      subject: assunto,\n\n      text_body: corpoFinal,\n\n      html_body: transformarEmHTML(corpoFinal),\n\n      meta: {\n        nome: nome,\n        email: email,\n        perfil: cliente.perfil || \"\",\n        saldo: cliente.saldo || \"\",\n        quantidade_investimentos:\n          cliente.investimentos_disponiveis?.length || 0\n      }\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -155,6 +155,76 @@
       "id": "6998c61e-c3c3-4dfd-9108-f9defb06beaa",
       "name": "Send a message",
       "webhookId": "7c0913fa-c016-4bb4-8302-f140e3acd930",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RZS8VYtxH9xyl2xY",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "valid-email-condition",
+              "leftValue": "={{ $json.email_valido }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1456,
+        -128
+      ],
+      "id": "if-email-valido-001",
+      "name": "IF - E-mail válido?"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const invalidos = items\n  .map(item => item.json)\n  .filter(cliente => cliente.email && cliente.email_valido === false);\n\nif (invalidos.length === 0) {\n  return [];\n}\n\nconst linhas = invalidos.map(cliente => {\n  return `- Nome: ${cliente.meta?.nome || cliente.nome || \"Não informado\"} | E-mail: ${cliente.to || cliente.email || \"Não informado\"} | Perfil: ${cliente.meta?.perfil || cliente.perfil || \"Não informado\"} | Motivo: formato inválido`;\n});\n\nconst corpoTexto = [\n  \"Olá, Luiz Mario.\",\n  \"\",\n  \"A validação do workflow identificou os seguintes e-mails inválidos:\",\n  \"\",\n  ...linhas,\n  \"\",\n  `Total de e-mails inválidos: ${invalidos.length}`,\n  \"\",\n  \"A lista foi gerada automaticamente pelo workflow de RPA.\"\n].join(\"\\n\");\n\nconst corpoHtml = `\n<html>\n  <body>\n    <p>Olá, Luiz Mario.</p>\n    <p>A validação do workflow identificou os seguintes e-mails inválidos:</p>\n    <ul>\n      ${invalidos.map(cliente => `<li><strong>${cliente.meta?.nome || cliente.nome || \"Não informado\"}</strong> — ${cliente.to || cliente.email || \"Não informado\"} — formato inválido</li>`).join(\"\")}\n    </ul>\n    <p><strong>Total:</strong> ${invalidos.length}</p>\n    <p>Lista gerada automaticamente pelo workflow de RPA.</p>\n  </body>\n</html>\n`;\n\nreturn [{\n  json: {\n    to: \"luizmariomoutinho1@gmail.com\",\n    subject: `Lista de e-mails inválidos (${invalidos.length})`,\n    text_body: corpoTexto,\n    html_body: corpoHtml,\n    total_invalidos: invalidos.length,\n    invalidos\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        80
+      ],
+      "id": "code-invalidos-001",
+      "name": "Code - Preparar lista de inválidos"
+    },
+    {
+      "parameters": {
+        "sendTo": "luizmariomoutinho1@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        80
+      ],
+      "id": "gmail-invalidos-001",
+      "name": "Send - Lista de e-mails inválidos",
       "credentials": {
         "gmailOAuth2": {
           "id": "RZS8VYtxH9xyl2xY",
@@ -240,7 +310,7 @@
       "main": [
         [
           {
-            "node": "Send a message",
+            "node": "IF - E-mail válido?",
             "type": "main",
             "index": 0
           }
@@ -248,6 +318,46 @@
       ]
     },
     "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - E-mail válido?": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Preparar lista de inválidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Preparar lista de inválidos": {
+      "main": [
+        [
+          {
+            "node": "Send - Lista de e-mails inválidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send - Lista de e-mails inválidos": {
       "main": [
         [
           {
